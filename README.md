@@ -8,6 +8,8 @@ For now :
 
 - zoom-effect :
 
+Works better with small canvas.
+
 A zoom-in zoom-out tool for your sprites. Simple to use, multidirectional (right, left, bottom, top, top-right, top-left, bottom-right, bottom-left)
 Just enter the zoom percentage you want, the number of frames, the direction and if you want a zoom-in or a zoom-out effect. 
 
