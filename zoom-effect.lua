@@ -1,14 +1,23 @@
 -- Zoom Effect Script for Aseprite with Zoom In and Zoom Out Options
 
+-- Function to update checkboxes based on selection
+local function updateZoomOptions(dlg, option)
+  if option == "zoomIn" then
+    dlg:modify{id="zoomOut", selected=false}
+  elseif option == "zoomOut" then
+    dlg:modify{id="zoomIn", selected=false}
+  end
+end
+
 -- Prompt the user for input
 local dlg = Dialog("Zoom Effect")
+dlg:check{ id="zoomIn", label="Zoom In", selected=true, onclick=function() updateZoomOptions(dlg, "zoomIn") end }
+dlg:check{ id="zoomOut", label="Zoom Out", selected=false, onclick=function() updateZoomOptions(dlg, "zoomOut") end }
 dlg:number{ id="zoomFactor", label="Zoom Factor (%)", text="200", decimals=0 }
 dlg:number{ id="numFrames", label="Number of Frames", text="10", decimals=0 }
 dlg:combobox{ id="moveDirection", label="Move Direction",
               options={"Centered", "Left", "Right", "Up", "Down", "Top Left", "Top Right", "Bottom Left", "Bottom Right"},
               selected=1 }
-dlg:check{ id="zoomIn", label="Zoom In", selected=true }
-dlg:check{ id="zoomOut", label="Zoom Out", selected=false }
 dlg:button{ id="ok", text="OK" }
 dlg:button{ id="cancel", text="Cancel" }
 dlg:show()
