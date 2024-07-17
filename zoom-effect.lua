@@ -1,4 +1,4 @@
--- Zoom Effect Script for Aseprite with Zoom In and Zoom Out Options
+-- Zoom and Rotate Effect Script for Aseprite with Zoom In, Zoom Out, and Rotation Options
 
 -- Function to update checkboxes based on selection
 local function updateZoomOptions(dlg, option)
@@ -9,15 +9,25 @@ local function updateZoomOptions(dlg, option)
   end
 end
 
+-- Function to enable or disable rotation options based on selection
+local function updateRotationOptions(dlg)
+  local rotate = dlg.data.rotate
+  dlg:modify{id="rotationAngle", enabled=rotate}
+  dlg:modify{id="rotationDirection", enabled=rotate}
+end
+
 -- Prompt the user for input
-local dlg = Dialog("Zoom Effect")
-dlg:check{ id="zoomIn", label="Zoom In", selected=true, onclick=function() updateZoomOptions(dlg, "zoomIn") end }
-dlg:check{ id="zoomOut", label="Zoom Out", selected=false, onclick=function() updateZoomOptions(dlg, "zoomOut") end }
+local dlg = Dialog("Zoom and Rotate Effect")
 dlg:number{ id="zoomFactor", label="Zoom Factor (%)", text="200", decimals=0 }
 dlg:number{ id="numFrames", label="Number of Frames", text="10", decimals=0 }
 dlg:combobox{ id="moveDirection", label="Move Direction",
               options={"Centered", "Left", "Right", "Up", "Down", "Top Left", "Top Right", "Bottom Left", "Bottom Right"},
               selected=1 }
+dlg:check{ id="zoomIn", label="Zoom In", selected=true, onclick=function() updateZoomOptions(dlg, "zoomIn") end }
+dlg:check{ id="zoomOut", label="Zoom Out", selected=false, onclick=function() updateZoomOptions(dlg, "zoomOut") end }
+dlg:check{ id="rotate", label="Rotate", selected=false, onclick=function() updateRotationOptions(dlg) end }
+dlg:number{ id="rotationAngle", label="Rotation Angle (degrees)", text="0", decimals=0, enabled=false }
+dlg:combobox{ id="rotationDirection", label="Rotation Direction", options={"Left", "Right"}, selected=1, enabled=false }
 dlg:button{ id="ok", text="OK" }
 dlg:button{ id="cancel", text="Cancel" }
 dlg:show()
@@ -33,6 +43,9 @@ local numFrames = data.numFrames
 local moveDirection = data.moveDirection
 local zoomIn = data.zoomIn
 local zoomOut = data.zoomOut
+local rotate = data.rotate
+local rotationAngle = data.rotationAngle
+local rotationDirection = data.rotationDirection
 
 -- Ensure only one zoom option is selected
 if zoomIn and zoomOut then
@@ -92,6 +105,30 @@ local function scaleImageNearestNeighbor(img, factor)
   return newImage
 end
 
+-- Function to rotate an image
+local function rotateImage(img, angle, direction)
+  local rotatedImage = Image(img.width, img.height, img.colorMode)
+  rotatedImage:clear()
+
+  local centerX = img.width / 2
+  local centerY = img.height / 2
+  local radians = math.rad(angle * (direction == "Right" and -1 or 1))
+
+  for y = 0, img.height - 1 do
+    for x = 0, img.width - 1 do
+      local srcX = math.floor(centerX + (x - centerX) * math.cos(radians) - (y - centerY) * math.sin(radians))
+      local srcY = math.floor(centerY + (x - centerX) * math.sin(radians) + (y - centerY) * math.cos(radians))
+      
+      if srcX >= 0 and srcX < img.width and srcY >= 0 and srcY < img.height then
+        local color = img:getPixel(srcX, srcY)
+        rotatedImage:putPixel(x, y, color)
+      end
+    end
+  end
+
+  return rotatedImage
+end
+
 -- Function to center the scaled image
 local function centerImage(img, spriteWidth, spriteHeight, offsetX, offsetY)
   local centeredImage = Image(spriteWidth, spriteHeight, img.colorMode)
@@ -129,8 +166,9 @@ local function centerImage(img, spriteWidth, spriteHeight, offsetX, offsetY)
   return centeredImage
 end
 
--- Add frames and apply the zoom effect progressively
+-- Add frames and apply the zoom and rotation effects progressively
 local stepFactor = math.abs((zoomFactorPercentage - 1) / (numFrames - 1))  -- Ensure stepFactor is positive
+local stepRotation = rotationAngle / numFrames
 
 for i = 1, numFrames do
   local currentFactor
@@ -145,7 +183,14 @@ for i = 1, numFrames do
   end
 
   local scaledImage = scaleImageNearestNeighbor(image, currentFactor)
-  local centeredImage = centerImage(scaledImage, sprite.width, sprite.height, 0, 0)
+  local rotatedImage = scaledImage
+
+  if rotate then
+    local currentRotation = stepRotation * (i - 1)
+    rotatedImage = rotateImage(scaledImage, currentRotation, rotationDirection)
+  end
+
+  local centeredImage = centerImage(rotatedImage, sprite.width, sprite.height, 0, 0)
   
   -- Create a new frame and add the centered image as a new cel
   local newFrame = sprite:newEmptyFrame()
